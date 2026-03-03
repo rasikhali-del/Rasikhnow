@@ -10,45 +10,94 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ activeType }: HeroSectionProps) => {
-  const [countdown, setCountdown] = useState<{ hours: number, mins: number, secs: number } | null>(null);
+  const [countdown, setCountdown] = useState<{ hours: number, mins: number, secs: number, label: string } | null>(null);
 
-  const calculateCountdown = useCallback(() => {
+  // Get current time in PKT (UTC+5:00) — same as AnalogClock
+  const getPKTNow = (): Date => {
     const now = new Date();
-    const today = now.getDate();
-    // Simplified entry matching
-    const currentMonth = now.getMonth();
+    const pktOffset = 5 * 60 * 60 * 1000;
+    return new Date(now.getTime() + pktOffset + now.getTimezoneOffset() * 60 * 1000);
+  };
+
+  // Parse a time string like "05:12 AM" into a Date, using baseDate for the day/month/year
+  const parseTimeStr = (timeStr: string, baseDate: Date): Date => {
+    const [time, period] = timeStr.split(' ');
+    let [hours, minutes] = time.split(':').map(Number);
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    const d = new Date(baseDate);
+    d.setHours(hours, minutes, 0, 0);
+    return d;
+  };
+
+  const findEntryByDate = useCallback((day: number, month: number) => {
     const timetable = activeType === 'Sunni' ? sunniTimetable : shiaTimetable;
-    const entry = timetable.find(e => {
+    return timetable.find(e => {
       const isMarch = activeType === 'Sunni' ? (e.roza >= 11) : e.date.includes('March');
       const entryMonth = isMarch ? 2 : 1;
       const dayPart = activeType === 'Sunni' ? e.date.split(',')[0] : e.date.split(' ')[0];
       const entryDay = parseInt(dayPart);
-      return entryDay === today && entryMonth === currentMonth;
+      return entryDay === day && entryMonth === month;
     });
+  }, [activeType]);
 
-    if (!entry) return null;
-
-    // Parse iftaar time
-    const iftaarTimeStr = activeType === 'Sunni' ? (entry as any).maghrib : (entry as any).iftaar; // maghrib for sunni, iftaar for shia
-    if (!iftaarTimeStr) return null;
-
-    const [time, period] = iftaarTimeStr.split(' ');
-    let [hours, minutes] = time.split(':').map(Number);
-    if (period === 'PM' && hours !== 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-
-    const iftaarDate = new Date(now);
-    iftaarDate.setHours(hours, minutes, 0, 0);
-
-    const diff = iftaarDate.getTime() - now.getTime();
-    if (diff <= 0) return null;
-
+  const makeDiff = (diff: number, label: string) => {
     const h = Math.floor(diff / (1000 * 60 * 60));
     const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const s = Math.floor((diff % (1000 * 60)) / 1000);
+    return { hours: h, mins: m, secs: s, label };
+  };
 
-    return { hours: h, mins: m, secs: s };
-  }, [activeType]);
+  const calculateCountdown = useCallback(() => {
+    const now = getPKTNow();
+    const today = now.getDate();
+    const currentMonth = now.getMonth();
+
+    // 1) Early morning — check if today's sehri is still coming
+    const todayEntry = findEntryByDate(today, currentMonth);
+    if (todayEntry) {
+      const sehrTimeStr = todayEntry.sehr;
+      if (sehrTimeStr) {
+        const sehrDate = parseTimeStr(sehrTimeStr, now);
+        const diffSehr = sehrDate.getTime() - now.getTime();
+        if (diffSehr > 0) {
+          return makeDiff(diffSehr, 'TIME UNTIL SEHRI');
+        }
+      }
+    }
+
+    // 2) Sehri guzar gayi — check if today's iftaar is still coming
+    if (todayEntry) {
+      const iftaarTimeStr = activeType === 'Sunni' ? (todayEntry as any).maghrib : (todayEntry as any).iftaar;
+      if (iftaarTimeStr) {
+        const iftaarDate = parseTimeStr(iftaarTimeStr, now);
+        const diffIftaar = iftaarDate.getTime() - now.getTime();
+        if (diffIftaar > 0) {
+          return makeDiff(diffIftaar, 'TIME UNTIL IFTAAR');
+        }
+      }
+    }
+
+    // 3) Iftaar bhi guzar gayi — countdown to tomorrow's sehri
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDay = tomorrow.getDate();
+    const tomorrowMonth = tomorrow.getMonth();
+
+    const tomorrowEntry = findEntryByDate(tomorrowDay, tomorrowMonth);
+    if (tomorrowEntry) {
+      const sehrTimeStr = tomorrowEntry.sehr;
+      if (sehrTimeStr) {
+        const sehrDate = parseTimeStr(sehrTimeStr, tomorrow);
+        const diffSehr = sehrDate.getTime() - now.getTime();
+        if (diffSehr > 0) {
+          return makeDiff(diffSehr, 'TIME UNTIL SEHRI');
+        }
+      }
+    }
+
+    return null;
+  }, [activeType, findEntryByDate]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -103,7 +152,7 @@ const HeroSection = ({ activeType }: HeroSectionProps) => {
             animate={{ opacity: 1, y: 0 }}
             className="glass px-6 py-2 rounded-full border-neon-gold/30 mb-8 flex items-center gap-3"
           >
-            <span className="text-sm font-medium text-neon-gold">TIME UNTIL IFTAAR:</span>
+            <span className="text-sm font-medium text-neon-gold">{countdown.label}</span>
             <span className="font-mono text-xl font-bold tracking-widest text-white">
               {String(countdown.hours).padStart(2, '0')}:{String(countdown.mins).padStart(2, '0')}:{String(countdown.secs).padStart(2, '0')}
             </span>

@@ -2,10 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 
 const AnalogClock = () => {
-  const [time, setTime] = useState(new Date());
+  const getIST = () => {
+    const now = new Date();
+    // Convert to PKT (UTC+5:00)
+    const pktOffset = 5 * 60 * 60 * 1000;
+    return new Date(now.getTime() + pktOffset + now.getTimezoneOffset() * 60 * 1000);
+  };
+
+  const [time, setTime] = useState(getIST());
 
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
+    const timer = setInterval(() => setTime(getIST()), 1000);
     return () => clearInterval(timer);
   }, []);
 
