@@ -23,6 +23,10 @@ export default {
             }
         },
         extend: {
+            fontFamily: {
+                sans: ['Inter', 'sans-serif'],
+                arabic: ['Amiri', 'serif'],
+            },
             colors: {
                 border: 'hsl(var(--border))',
                 borderColor: {
@@ -34,7 +38,13 @@ export default {
                 foreground: 'hsl(var(--foreground))',
                 primary: {
                     DEFAULT: 'hsl(var(--primary))',
-                    foreground: 'hsl(var(--primary-foreground))'
+                    foreground: 'hsl(var(--primary-foreground))',
+                    glow: 'hsl(var(--primary-glow))'
+                },
+                neon: {
+                    cyan: 'hsl(var(--neon-cyan))',
+                    green: 'hsl(var(--neon-green))',
+                    gold: 'hsl(var(--neon-gold))'
                 },
                 secondary: {
                     DEFAULT: 'hsl(var(--secondary))',
@@ -98,7 +108,11 @@ export default {
             },
             boxShadow: {
                 card: 'var(--shadow-card)',
-                hover: 'var(--shadow-hover)'
+                hover: 'var(--shadow-hover)',
+                'glow-cyan': '0 0 10px hsl(var(--neon-cyan)), 0 0 20px hsl(var(--neon-cyan))',
+                'glow-green': '0 0 10px hsl(var(--neon-green)), 0 0 20px hsl(var(--neon-green))',
+                'glow-gold': '0 0 10px hsl(var(--neon-gold)), 0 0 20px hsl(var(--neon-gold))',
+                'glow-primary': '0 0 10px hsl(var(--primary)), 0 0 20px hsl(var(--primary))',
             },
             keyframes: {
                 'accordion-down': {
@@ -136,13 +150,23 @@ export default {
                         opacity: '1',
                         transform: 'translateX(0)'
                     }
-                }
+                },
+                'float': {
+                    '0%, 100%': { transform: 'translateY(0)' },
+                    '50%': { transform: 'translateY(-10px)' },
+                },
+                'pulse-glow': {
+                    '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+                    '50%': { opacity: '0.8', transform: 'scale(1.05)' },
+                },
             },
             animation: {
                 'accordion-down': 'accordion-down 0.2s ease-out',
                 'accordion-up': 'accordion-up 0.2s ease-out',
                 'fade-in': 'fade-in 0.5s ease-out',
-                'slide-in': 'slide-in 0.5s ease-out'
+                'slide-in': 'slide-in 0.5s ease-out',
+                'float': 'float 3s ease-in-out infinite',
+                'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
             }
         }
     },
